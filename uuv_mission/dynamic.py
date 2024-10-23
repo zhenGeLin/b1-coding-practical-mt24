@@ -2,13 +2,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
-from .terrain import generate_reference_and_limits
+from uuv_mission.terrain import generate_reference_and_limits
 import csv
 import os
+from uuv_mission.control import PDController  # 从 control 模块中导入 PDController
 
 class Submarine:
     def __init__(self):
-
         self.mass = 1
         self.drag = 0.1
         self.actuator_gain = 1
@@ -19,7 +19,6 @@ class Submarine:
         self.pos_y = 0
         self.vel_x = 1 # Constant velocity in x direction
         self.vel_y = 0
-
 
     def transition(self, action: float, disturbance: float):
         self.pos_x += self.vel_x * self.dt
@@ -40,11 +39,11 @@ class Submarine:
         self.pos_y = 0
         self.vel_x = 1
         self.vel_y = 0
-    
+
 class Trajectory:
     def __init__(self, position: np.ndarray):
         self.position = position  
-        
+    
     def plot(self):
         plt.plot(self.position[:, 0], self.position[:, 1])
         plt.show()
@@ -107,7 +106,11 @@ class ClosedLoop:
         for t in range(T):
             positions[t] = self.plant.get_position()
             observation_t = self.plant.get_depth()
-            # Call your controller here
+            
+            
+            actions[t] = self.controller.control(mission.references[t], observation_t)
+            
+            
             self.plant.transition(actions[t], disturbances[t])
 
         return Trajectory(positions)
@@ -118,5 +121,9 @@ class ClosedLoop:
 
 # Example usage:
 # mission = Mission.from_csv('mission.csv')
-# closed_loop = ClosedLoop(plant, controller)
+# controller = PDController()  # 从 control.py 模块实例化 PDController
+# submarine = Submarine()
+# closed_loop = ClosedLoop(submarine, controller)
+# disturbances = np.random.normal(0, 0.5, len(mission.references))
 # trajectory = closed_loop.simulate(mission, disturbances)
+# trajectory.plot_completed_mission(mission)
